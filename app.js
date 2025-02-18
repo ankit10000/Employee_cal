@@ -45,28 +45,35 @@ const calculateWorkingHoursForEmployee = (employeeId) => {
   });
 
   const result = Object.keys(workingHoursByDate).map((date, index) => {
-    const times = workingHoursByDate[date].sort((a, b) => a - b); // Sort by time
+    const times = workingHoursByDate[date].sort((a, b) => a - b); 
     let totalWorkingHours = 0;
     let checkInTime = null;
     let checkInCheckOutPairs = [];
 
     for (let i = 0; i < times.length; i++) {
       if (i % 2 === 0) {
-        // Pair check-in time (even index)
         checkInTime = times[i];
       } else {
-        // Pair check-out time (odd index)
-        if (checkInTime) {
-          const workingTime = (times[i] - checkInTime) / 1000 / 60 / 60; // Time in hours
-          totalWorkingHours += workingTime;
-          checkInCheckOutPairs.push({
-            checkIn: checkInTime,
-            checkOut: times[i],
-            workingHours: workingTime.toFixed(2)
-          });
-          checkInTime = null; // Reset for the next pair
-        }
+        const checkOutTime = times[i] || checkInTime; 
+        const workingTime = (checkOutTime - checkInTime) / 1000 / 60 / 60; 
+
+        totalWorkingHours += workingTime;
+        checkInCheckOutPairs.push({
+          checkIn: checkInTime,
+          checkOut: checkOutTime,
+          workingHours: workingTime.toFixed(2)
+        });
+
+        checkInTime = null; 
       }
+    }
+
+    if (checkInTime) { 
+      checkInCheckOutPairs.push({
+        checkIn: checkInTime,
+        checkOut: checkInTime, 
+        workingHours: 'N/A'
+      });
     }
 
     return {
@@ -79,6 +86,8 @@ const calculateWorkingHoursForEmployee = (employeeId) => {
 
   return result;
 };
+
+
 
 app.get('/working-hours-id', (req, res) => {
   const { empId } = req.query;
