@@ -42,7 +42,7 @@ const excelToDate = (serial) => {
 const convertedData = jsonData.map(entry => ({
   ...entry,
   'Time In and Time out': excelToDate(entry['Time In and Time out']),
-  'Emp id': String(entry['Emp id']) // Ensure Emp id is a string
+  'Emp id': String(entry['Emp id']) 
 }));
 
 const verifyToken = (req, res, next) => {
@@ -166,7 +166,7 @@ app.post('/login', async (req, res) => {
 
     const token = jwt.sign({ userId, role: user.role }, SECRET_KEY, { expiresIn: '2h' });
 
-    res.json({ token, role: user.role });
+    res.json({ token, role: user.role, userId: user.userId, empId: user.role === 'employee' ? user.userId : null });
 
   } catch (error) {
     res.status(500).json({ error: 'Server error' });
@@ -177,12 +177,11 @@ app.get('/working-hours', verifyToken, (req, res) => {
   if (req.user.role !== 'employee') return res.status(403).json({ error: 'Access denied' });
 
   const empId = req.user.userId;
-  console.log('Employee ID:', empId); // Debug log
+  console.log('Employee ID:', empId);
   const employeeData = convertedData.filter(entry => entry['Emp id'] === empId);
 
   if (!employeeData.length) return res.status(404).json({ error: 'No data found' });
 
-  // Calculate working hours for the employee
   const workingHours = calculateWorkingHoursForEmployee(empId);
   if (workingHours.error) {
     return res.status(404).json({ error: workingHours.error });
@@ -202,7 +201,6 @@ app.get('/all-working-hours', verifyToken, (req, res) => {
     if (!result.length) return res.status(404).json({ error: 'No data found for this employee' });
   }
 
-  // Calculate working hours for each employee
   const workingHoursData = empId
     ? calculateWorkingHoursForEmployee(empId)
     : convertedData.map(entry => calculateWorkingHoursForEmployee(entry['Emp id']));
