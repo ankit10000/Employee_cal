@@ -90,23 +90,47 @@ const calculateWorkingHoursForEmployee = (employeeId) => {
 
 
 app.get('/working-hours-id', (req, res) => {
-  const { empId } = req.query;
+  const { empId, startDate, endDate } = req.query;
 
   if (!empId) {
-    return res.status(400).json({ error: 'Employee ID is required' });
+      return res.status(400).json({ error: 'Employee ID is required' });
   }
 
+  // Fetch all data for the employee
   const result = calculateWorkingHoursForEmployee(parseInt(empId));
 
-  if (result.error) {
-    return res.status(404).json({ error: result.error });
+  // Filter based on the start and end date if provided
+  if (startDate || endDate) {
+      const filteredRecords = result.filter(record => {
+          const recordDate = new Date(record.date);
+          const start = startDate ? new Date(startDate) : null;
+          const end = endDate ? new Date(endDate) : null;
+
+          // If both startDate and endDate are provided, filter between the range
+          if (start && end) {
+              return recordDate >= start && recordDate <= end;
+          }
+          // If only startDate is provided, filter records from the start date onwards
+          if (start) {
+              return recordDate >= start;
+          }
+          // If only endDate is provided, filter records up to the end date
+          if (end) {
+              return recordDate <= end;
+          }
+          return true;  // If no date range is provided, return all records
+      });
+
+      return res.json({
+          records: filteredRecords,
+          total_working_hours: filteredRecords.reduce((total, record) => total + parseFloat(record.totalWorkingHours), 0).toFixed(2),
+      });
   }
 
-  const totalWorkingHours = result.reduce((total, record) => total + parseFloat(record.totalWorkingHours), 0);
-
+  // Return unfiltered result if no date range is provided
   return res.json({
-    records: result,
-    total_working_hours: totalWorkingHours.toFixed(2)
+      records: result,
+      total_working_hours: result.reduce((total, record) => total + parseFloat(record.totalWorkingHours), 0).toFixed(2),
   });
 });
 
