@@ -51,25 +51,25 @@ const excelToDate = (serial) => {
   return new Date(excelStartDate.getTime() + serial * millisecondsPerDay);
 };
 
-const verifyToken = (req, res, next) => {
-  const token = req.headers['authorization'];
+// const verifyToken = (req, res, next) => {
+//   const token = req.headers['authorization'];
 
-  if (!token) {
-    return res.status(401).json({ error: 'Unauthorized: Token is missing' });
-  }
+//   if (!token) {
+//     return res.status(401).json({ error: 'Unauthorized: Token is missing' });
+//   }
 
-  const actualToken = token.split(' ')[1];
-  console.log('Token:', actualToken); 
+//   const actualToken = token.split(' ')[1];
+//   console.log('Token:', actualToken); 
 
-  jwt.verify(actualToken, SECRET_KEY, (err, decoded) => {
-    if (err) {
-      return res.status(403).json({ error: 'Invalid token' });
-    }
+//   jwt.verify(actualToken, SECRET_KEY, (err, decoded) => {
+//     if (err) {
+//       return res.status(403).json({ error: 'Invalid token' });
+//     }
 
-    req.user = decoded;
-    next();
-  });
-};
+//     req.user = decoded;
+//     next();
+//   });
+// };
 
 const calculateWorkingHoursForEmployee = (employeeId, employeeData) => {
     if (employeeData.length === 0) {
@@ -244,7 +244,7 @@ app.post('/login', async (req, res) => {
   }
 });
 
-app.get('/working-hours', verifyToken, async (req, res) => {
+app.get('/working-hours', async (req, res) => {
     if (req.user.role !== 'employee') {
         return res.status(403).json({ error: 'Access denied' });
     }
@@ -269,7 +269,7 @@ app.get('/working-hours', verifyToken, async (req, res) => {
     }
 });
 
-app.get('/all-working-hours', verifyToken, async (req, res) => {
+app.get('/all-working-hours', async (req, res) => {
     if (req.user.role !== 'admin') {
         return res.status(403).json({ error: 'Access denied' });
     }
