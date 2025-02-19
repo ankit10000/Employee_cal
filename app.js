@@ -2,7 +2,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const xlsx = require('xlsx');
 const cors = require('cors');
-const jwt = require('jsonwebtoken');
+// const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const bodyParser = require('body-parser');
 const multer = require('multer');
@@ -236,8 +236,10 @@ app.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    const token = jwt.sign({ userId, role: user.role }, SECRET_KEY, { expiresIn: '2h' });
-    res.json({ token, role: user.role, userId: user.userId, empId: user.role === 'employee' ? user.userId : null });
+    // const token = jwt.sign({ userId, role: user.role }, SECRET_KEY, { expiresIn: '2h' });
+    res.json({ 
+      // token,
+       role: user.role, userId: user.userId, empId: user.role === 'employee' ? user.userId : null });
 
   } catch (error) {
     res.status(500).json({ error: 'Server error' });
