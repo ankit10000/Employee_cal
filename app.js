@@ -246,29 +246,63 @@ app.post('/login', async (req, res) => {
   }
 });
 
+// app.get('/working-hours', async (req, res) => {
+//     if (req.user.role !== 'employee') {
+//         return res.status(403).json({ error: 'Access denied' });
+//     }
+
+//     const empId = req.user.userId;
+//     console.log('Fetching working hours for Employee ID:', empId);
+
+//     try {
+//         const records = await WorkingHours.find({ empId });
+
+//         if (!records.length) {
+//             return res.status(404).json({ error: 'No working hours data found' });
+//         }
+
+//         const totalWorkingHours = records.reduce((total, record) => total + parseFloat(record.totalWorkingHours), 0).toFixed(2);
+
+//         res.json({ empId, records, total_working_hours: totalWorkingHours });
+
+//     } catch (error) {
+//         console.error('Error fetching working hours:', error);
+//         res.status(500).json({ error: 'Server error while fetching working hours' });
+//     }
+// });
+
 app.get('/working-hours', async (req, res) => {
-    if (req.user.role !== 'employee') {
-        return res.status(403).json({ error: 'Access denied' });
+  const { role, empId } = req.query;  // Get role and empId from query parameters
+
+  // Check if role and empId are provided
+  if (!role || !empId) {
+    return res.status(400).json({ error: 'role and empId are required' });
+  }
+
+  // Check if the role is 'employee'
+  if (role !== 'employee') {
+    return res.status(403).json({ error: 'Access denied: Only employees can view their working hours' });
+  }
+
+  console.log('Fetching working hours for Employee ID:', empId);
+
+  try {
+    const records = await WorkingHours.find({ empId });
+
+    if (!records.length) {
+      return res.status(404).json({ error: 'No working hours data found for the given employee' });
     }
 
-    const empId = req.user.userId;
-    console.log('Fetching working hours for Employee ID:', empId);
+    const totalWorkingHours = records.reduce(
+      (total, record) => total + parseFloat(record.totalWorkingHours), 0
+    ).toFixed(2);
 
-    try {
-        const records = await WorkingHours.find({ empId });
+    res.json({ empId, records, total_working_hours: totalWorkingHours });
 
-        if (!records.length) {
-            return res.status(404).json({ error: 'No working hours data found' });
-        }
-
-        const totalWorkingHours = records.reduce((total, record) => total + parseFloat(record.totalWorkingHours), 0).toFixed(2);
-
-        res.json({ empId, records, total_working_hours: totalWorkingHours });
-
-    } catch (error) {
-        console.error('Error fetching working hours:', error);
-        res.status(500).json({ error: 'Server error while fetching working hours' });
-    }
+  } catch (error) {
+    console.error('Error fetching working hours:', error);
+    res.status(500).json({ error: 'Server error while fetching working hours' });
+  }
 });
 
 app.get('/all-working-hours', async (req, res) => {
