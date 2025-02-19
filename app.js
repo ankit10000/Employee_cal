@@ -16,7 +16,7 @@ app.use(bodyParser.json());
 const port = 4000;
 const SECRET_KEY = 'hope24*7itz785264978';
 
-mongoose.connect('mongodb://localhost:27017/attendanceDB', {
+mongoose.connect('mongodb+srv://toriando1234:Ankit&1234@toriando1.ys6dz.mongodb.net/attendanceDB', {
   useNewUrlParser: true,
   useUnifiedTopology: true
 }).then(() => console.log('MongoDB connected'))
