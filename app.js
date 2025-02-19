@@ -2,7 +2,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const xlsx = require('xlsx');
 const cors = require('cors');
-// const jwt = require('jsonwebtoken');
+const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const bodyParser = require('body-parser');
 const multer = require('multer');
@@ -51,25 +51,25 @@ const excelToDate = (serial) => {
   return new Date(excelStartDate.getTime() + serial * millisecondsPerDay);
 };
 
-// const verifyToken = (req, res, next) => {
-//   const token = req.headers['authorization'];
+const verifyToken = (req, res, next) => {
+  const token = req.headers['authorization'];
 
-//   if (!token) {
-//     return res.status(401).json({ error: 'Unauthorized: Token is missing' });
-//   }
+  if (!token) {
+    return res.status(401).json({ error: 'Unauthorized: Token is missing' });
+  }
 
-//   const actualToken = token.split(' ')[1];
-//   console.log('Token:', actualToken); 
+  const actualToken = token.split(' ')[1];
+  console.log('Token:', actualToken); 
 
-//   jwt.verify(actualToken, SECRET_KEY, (err, decoded) => {
-//     if (err) {
-//       return res.status(403).json({ error: 'Invalid token' });
-//     }
+  jwt.verify(actualToken, SECRET_KEY, (err, decoded) => {
+    if (err) {
+      return res.status(403).json({ error: 'Invalid token' });
+    }
 
-//     req.user = decoded;
-//     next();
-//   });
-// };
+    req.user = decoded;
+    next();
+  });
+};
 
 const calculateWorkingHoursForEmployee = (employeeId, employeeData) => {
     if (employeeData.length === 0) {
@@ -236,76 +236,40 @@ app.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    // const token = jwt.sign({ userId, role: user.role }, SECRET_KEY, { expiresIn: '2h' });
-    res.json({ 
-      // token,
-       role: user.role, userId: user.userId, empId: user.role === 'employee' ? user.userId : null });
+    const token = jwt.sign({ userId, role: user.role }, SECRET_KEY, { expiresIn: '2h' });
+    res.json({ token, role: user.role, userId: user.userId, empId: user.role === 'employee' ? user.userId : null });
 
   } catch (error) {
     res.status(500).json({ error: 'Server error' });
   }
 });
 
-// app.get('/working-hours', async (req, res) => {
-//     if (req.user.role !== 'employee') {
-//         return res.status(403).json({ error: 'Access denied' });
-//     }
-
-//     const empId = req.user.userId;
-//     console.log('Fetching working hours for Employee ID:', empId);
-
-//     try {
-//         const records = await WorkingHours.find({ empId });
-
-//         if (!records.length) {
-//             return res.status(404).json({ error: 'No working hours data found' });
-//         }
-
-//         const totalWorkingHours = records.reduce((total, record) => total + parseFloat(record.totalWorkingHours), 0).toFixed(2);
-
-//         res.json({ empId, records, total_working_hours: totalWorkingHours });
-
-//     } catch (error) {
-//         console.error('Error fetching working hours:', error);
-//         res.status(500).json({ error: 'Server error while fetching working hours' });
-//     }
-// });
-
-app.get('/working-hours', async (req, res) => {
-  const { role, empId } = req.query;  // Get role and empId from query parameters
-
-  // Check if role and empId are provided
-  if (!role || !empId) {
-    return res.status(400).json({ error: 'role and empId are required' });
-  }
-
-  // Check if the role is 'employee'
-  if (role !== 'employee') {
-    return res.status(403).json({ error: 'Access denied: Only employees can view their working hours' });
-  }
-
-  console.log('Fetching working hours for Employee ID:', empId);
-
-  try {
-    const records = await WorkingHours.find({ empId });
-
-    if (!records.length) {
-      return res.status(404).json({ error: 'No working hours data found for the given employee' });
+app.get('/working-hours', verifyToken, async (req, res) => {
+    if (req.user.role !== 'employee') {
+        return res.status(403).json({ error: 'Access denied' });
     }
 
-    const totalWorkingHours = records.reduce(
-      (total, record) => total + parseFloat(record.totalWorkingHours), 0
-    ).toFixed(2);
+    const empId = req.user.userId;
+    console.log('Fetching working hours for Employee ID:', empId);
 
-    res.json({ empId, records, total_working_hours: totalWorkingHours });
+    try {
+        const records = await WorkingHours.find({ empId });
 
-  } catch (error) {
-    console.error('Error fetching working hours:', error);
-    res.status(500).json({ error: 'Server error while fetching working hours' });
-  }
+        if (!records.length) {
+            return res.status(404).json({ error: 'No working hours data found' });
+        }
+
+        const totalWorkingHours = records.reduce((total, record) => total + parseFloat(record.totalWorkingHours), 0).toFixed(2);
+
+        res.json({ empId, records, total_working_hours: totalWorkingHours });
+
+    } catch (error) {
+        console.error('Error fetching working hours:', error);
+        res.status(500).json({ error: 'Server error while fetching working hours' });
+    }
 });
 
-app.get('/all-working-hours', async (req, res) => {
+app.get('/all-working-hours', verifyToken, async (req, res) => {
     if (req.user.role !== 'admin') {
         return res.status(403).json({ error: 'Access denied' });
     }
