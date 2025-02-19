@@ -22,11 +22,17 @@ mongoose.connect('mongodb+srv://toriando1234:Ankit&1234@toriando1.ys6dz.mongodb.
 }).then(() => console.log('MongoDB connected'))
   .catch(err => console.error('MongoDB connection error:', err));
 
-const userSchema = new mongoose.Schema({
-  userId: { type: String, required: true, unique: true },
-  password: { type: String, required: true },
-  role: { type: String, enum: ['admin', 'employee'], required: true }
-});
+  const userSchema = new mongoose.Schema({
+    userId: { type: String, required: true, unique: true },
+    password: { type: String, required: true },
+    role: { type: String, enum: ['admin', 'employee'], required: true },
+    name: { type: String, required: true },
+    contactNumber: { type: String, required: true },
+    address: { type: String, required: true },
+    joiningDate: { type: Date, required: true },
+    email: { type: String, required: true, unique: true }
+  });
+  
 const User = mongoose.model('User', userSchema);
 
 const workingHoursSchema = new mongoose.Schema({
@@ -199,33 +205,136 @@ const calculateWorkingHoursForEmployee = (employeeId, employeeData) => {
   });
 
 
-app.post('/register', async (req, res) => {
-  try {
-    const { userId, password, role } = req.body;
-
-    if (!userId || !password || !role) {
-      return res.status(400).json({ error: 'All fields are required' });
+  app.post('/register', verifyToken, async (req, res) => {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Access denied' });
     }
-
-    if (!['admin', 'employee'].includes(role)) {
-      return res.status(400).json({ error: 'Invalid role' });
+  
+    try {
+      const { userId, password, role, name, contactNumber, address, joiningDate, email } = req.body;
+  
+      if (!userId || !password || !role || !name || !contactNumber || !address || !joiningDate || !email) {
+        return res.status(400).json({ error: 'All fields are required' });
+      }
+  
+      if (!['admin', 'employee'].includes(role)) {
+        return res.status(400).json({ error: 'Invalid role' });
+      }
+  
+      const existingUser = await User.findOne({ userId });
+      if (existingUser) {
+        return res.status(400).json({ error: 'User already exists' });
+      }
+  
+      const existingEmail = await User.findOne({ email });
+      if (existingEmail) {
+        return res.status(400).json({ error: 'Email already exists' });
+      }
+  
+      const hashedPassword = await bcrypt.hash(password, 10);
+      const newUser = new User({
+        userId,
+        password: hashedPassword,
+        role,
+        name,
+        contactNumber,
+        address,
+        joiningDate,
+        email
+      });
+  
+      await newUser.save();
+      res.status(201).json({ message: 'User registered successfully' });
+  
+    } catch (error) {
+      res.status(500).json({ error: 'Server error' });
     }
-
-    const existingUser = await User.findOne({ userId });
-    if (existingUser) {
-      return res.status(400).json({ error: 'User already exists' });
+  });
+  app.get('/user', verifyToken, async (req, res) => {
+    const userId = req.user.userId;
+    
+    if (req.user.role === 'admin') {
+      const users = await User.find();
+      return res.json({ users });
     }
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const newUser = new User({ userId, password: hashedPassword, role });
-
-    await newUser.save();
-    res.status(201).json({ message: 'User registered successfully' });
-
-  } catch (error) {
-    res.status(500).json({ error: 'Server error' });
-  }
-});
+  
+    try {
+      const user = await User.findOne({ userId });
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+  
+      res.json(user);
+    } catch (error) {
+      res.status(500).json({ error: 'Error fetching user data' });
+    }
+  });
+  app.put('/admin/update-user/:userId', verifyToken, async (req, res) => {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+  
+    const { userId } = req.params;
+    const { name, contactNumber, address, email } = req.body;
+  
+    try {
+      const user = await User.findOne({ userId });
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+  
+      user.name = name || user.name;
+      user.contactNumber = contactNumber || user.contactNumber;
+      user.address = address || user.address;
+      user.email = email || user.email;
+  
+      await user.save();
+      res.json({ message: 'User updated successfully' });
+  
+    } catch (error) {
+      res.status(500).json({ error: 'Error updating user data' });
+    }
+  });
+  app.delete('/admin/delete-user/:userId', verifyToken, async (req, res) => {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+  
+    const { userId } = req.params;
+  
+    try {
+      const user = await User.findOne({ userId });
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+  
+      await user.remove();
+      res.json({ message: 'User deleted successfully' });
+  
+    } catch (error) {
+      res.status(500).json({ error: 'Error deleting user' });
+    }
+  });
+  app.get('/users/:userId', async (req, res) => {
+    try {
+      const { userId } = req.params;
+      console.log("Received userId:", userId); // Debugging
+  
+      const user = await User.findOne({ userId }); // Ensure userId exists in the database
+  
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+  
+      res.json(user);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: "Error fetching user data" });
+    }
+  });
+  
+  
+  
 
 app.post('/login', async (req, res) => {
   try {
