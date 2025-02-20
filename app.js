@@ -203,8 +203,6 @@ const calculateWorkingHoursForEmployee = (employeeId, employeeData) => {
       res.status(500).json({ error: 'Internal server error' });
     }
   });
-
-
   app.post('/register', verifyToken, async (req, res) => {
     if (req.user.role !== 'admin') {
       return res.status(403).json({ error: 'Access denied' });
@@ -318,9 +316,9 @@ const calculateWorkingHoursForEmployee = (employeeId, employeeData) => {
   app.get('/users/:userId', async (req, res) => {
     try {
       const { userId } = req.params;
-      console.log("Received userId:", userId); // Debugging
+      console.log("Received userId:", userId);
   
-      const user = await User.findOne({ userId }); // Ensure userId exists in the database
+      const user = await User.findOne({ userId }); 
   
       if (!user) {
         return res.status(404).json({ error: "User not found" });
@@ -332,90 +330,84 @@ const calculateWorkingHoursForEmployee = (employeeId, employeeData) => {
       res.status(500).json({ error: "Error fetching user data" });
     }
   });
-  
-  
-  
-
-app.post('/login', async (req, res) => {
-  try {
-    const { userId, password } = req.body;
-    const user = await User.findOne({ userId });
-
-    if (!user || !bcrypt.compareSync(password, user.password)) {
-      return res.status(401).json({ error: 'Invalid credentials' });
-    }
-
-    const token = jwt.sign({ userId, role: user.role }, SECRET_KEY, { expiresIn: '2h' });
-    res.json({ token, role: user.role, userId: user.userId, empId: user.role === 'employee' ? user.userId : null });
-
-  } catch (error) {
-    res.status(500).json({ error: 'Server error' });
-  }
-});
-
-app.get('/working-hours', verifyToken, async (req, res) => {
-    if (req.user.role !== 'employee') {
-        return res.status(403).json({ error: 'Access denied' });
-    }
-
-    const empId = req.user.userId;
-    console.log('Fetching working hours for Employee ID:', empId);
-
+  app.post('/login', async (req, res) => {
     try {
-        const records = await WorkingHours.find({ empId });
+      const { userId, password } = req.body;
+      const user = await User.findOne({ userId });
 
-        if (!records.length) {
-            return res.status(404).json({ error: 'No working hours data found' });
-        }
+      if (!user || !bcrypt.compareSync(password, user.password)) {
+        return res.status(401).json({ error: 'Invalid credentials' });
+      }
 
-        const totalWorkingHours = records.reduce((total, record) => total + parseFloat(record.totalWorkingHours), 0).toFixed(2);
-
-        res.json({ empId, records, total_working_hours: totalWorkingHours });
+      const token = jwt.sign({ userId, role: user.role }, SECRET_KEY, { expiresIn: '2h' });
+      res.json({ token, role: user.role, userId: user.userId, empId: user.role === 'employee' ? user.userId : null });
 
     } catch (error) {
-        console.error('Error fetching working hours:', error);
-        res.status(500).json({ error: 'Server error while fetching working hours' });
+      res.status(500).json({ error: 'Server error' });
     }
-});
+  });
 
-app.get('/all-working-hours', verifyToken, async (req, res) => {
-    if (req.user.role !== 'admin') {
-        return res.status(403).json({ error: 'Access denied' });
-    }
+  app.get('/working-hours', verifyToken, async (req, res) => {
+      if (req.user.role !== 'employee') {
+          return res.status(403).json({ error: 'Access denied' });
+      }
 
-    try {
-        const { empId, date } = req.query;
-        let query = {};
+      const empId = req.user.userId;
+      console.log('Fetching working hours for Employee ID:', empId);
 
-        if (empId) query.empId = empId;
-        if (date) query.date = date; 
+      try {
+          const records = await WorkingHours.find({ empId });
 
-        const records = await WorkingHours.find(query);
+          if (!records.length) {
+              return res.status(404).json({ error: 'No working hours data found' });
+          }
 
-        if (!records.length) {
-            return res.status(404).json({ error: 'No records found for the given filters' });
-        }
+          const totalWorkingHours = records.reduce((total, record) => total + parseFloat(record.totalWorkingHours), 0).toFixed(2);
 
-        const totalWorkingHours = records.reduce((total, record) => total + parseFloat(record.totalWorkingHours), 0).toFixed(2);
+          res.json({ empId, records, total_working_hours: totalWorkingHours });
 
-        res.json({ records, total_working_hours: totalWorkingHours });
+      } catch (error) {
+          console.error('Error fetching working hours:', error);
+          res.status(500).json({ error: 'Server error while fetching working hours' });
+      }
+  });
 
-    } catch (error) {
-        console.error('Error fetching working hours:', error);
-        res.status(500).json({ error: 'Server error while fetching working hours' });
-    }
-});
+  app.get('/all-working-hours', verifyToken, async (req, res) => {
+      if (req.user.role !== 'admin') {
+          return res.status(403).json({ error: 'Access denied' });
+      }
 
+      try {
+          const { empId, date } = req.query;
+          let query = {};
 
-  
+          if (empId) query.empId = empId;
+          if (date) query.date = date; 
+
+          const records = await WorkingHours.find(query);
+
+          if (!records.length) {
+              return res.status(404).json({ error: 'No records found for the given filters' });
+          }
+
+          const totalWorkingHours = records.reduce((total, record) => total + parseFloat(record.totalWorkingHours), 0).toFixed(2);
+
+          res.json({ records, total_working_hours: totalWorkingHours });
+
+      } catch (error) {
+          console.error('Error fetching working hours:', error);
+          res.status(500).json({ error: 'Server error while fetching working hours' });
+      }
+  });
+
   app.post('/logout', (req, res) => {
     res.json({ message: 'Logout successful' });
   });
 
-app.post('/logout', (req, res) => {
-  res.json({ message: 'Logout successful' });
-});
+  app.post('/logout', (req, res) => {
+    res.json({ message: 'Logout successful' });
+  });
 
-app.listen(port, () => {
-  console.log(`Server is running on http://localhost:${port}`);
-});
+  app.listen(port, () => {
+    console.log(`Server is running on http://localhost:${port}`);
+  });
